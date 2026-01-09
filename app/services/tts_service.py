@@ -1,4 +1,3 @@
-
 import torch
 from parler_tts import ParlerTTSForConditionalGeneration
 from transformers import AutoTokenizer
@@ -8,6 +7,7 @@ import numpy as np
 from app.core.config import settings
 from app.core import constants as log_msg
 from app.core.logging import logger
+
 
 class TTSService:
     def __init__(self):
@@ -23,11 +23,11 @@ class TTSService:
         try:
             logger.info(log_msg.TTS_MODEL_LOAD_START)
             
-            self.model = ParlerTTSForConditionalGeneration.from_pretrained(settings.MODEL_ID).to(self.device)
-            self.tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_ID)
+            self.model = ParlerTTSForConditionalGeneration.from_pretrained(settings.MODEL_ID, use_auth_token=settings.HF_TOKEN).to(self.device)
+            self.tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_ID, use_auth_token=settings.HF_TOKEN)
             
             # As per user snippet, getting tokenizer for description from model config
-            self.description_tokenizer = AutoTokenizer.from_pretrained(self.model.config.text_encoder._name_or_path)
+            self.description_tokenizer = AutoTokenizer.from_pretrained(self.model.config.text_encoder._name_or_path, use_auth_token=settings.HF_TOKEN)
             
             self.model.eval() # Set to eval mode as per snippet
             

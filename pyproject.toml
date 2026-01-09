@@ -1,0 +1,16 @@
+[project]
+name = "parlertts-maithili"
+version = "0.1.0"
+description = "Maithili TTS Service"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic-settings",
+    "torch",
+    "transformers",
+    "scipy",
+    "soundfile",
+    "parler-tts @ git+https://github.com/huggingface/parler-tts.git",
+    "python-multipart",
+]

@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI
 from app.api.endpoints import router as api_router
 from app.core.config import settings
@@ -23,4 +22,4 @@ async def shutdown_event():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=5555, reload=True)

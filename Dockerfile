@@ -1,6 +1,9 @@
 
 FROM python:3.10-slim
 
+# Install uv provided tools
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -20,12 +23,11 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy requirements first to leverage cache
-COPY requirements.txt .
+# Copy project definition
+COPY pyproject.toml .
 
 # Install dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --system --no-cache -r pyproject.toml
 
 # Copy application code
 COPY app/ ./app/
