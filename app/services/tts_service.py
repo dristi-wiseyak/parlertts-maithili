@@ -16,40 +16,80 @@ class TTSService:
         self.tokenizer = None
         self.description_tokenizer = None
         
-        logger.info(log_msg.TTS_MODEL_INIT.format(settings.MODEL_ID, self.device))
-        self._load_model()
+        # Lazy loading: Model is NOT loaded here. It creates the service quickly.
+        # It will be loaded on the first request.
+        logger.info("TTSService initialized. Model will be loaded lazily on first request.")
 
     def _load_model(self):
+        """
+        Loads the model. Safe to call multiple times (checks if already loaded).
+        Tries to load from local cache first to support offline/cached usage.
+        """
+        if self.model is not None:
+            return
+
         try:
             logger.info(log_msg.TTS_MODEL_LOAD_START)
+            logger.info(log_msg.TTS_MODEL_INIT.format(settings.MODEL_ID, self.device))
             
-            self.model = ParlerTTSForConditionalGeneration.from_pretrained(settings.MODEL_ID, use_auth_token=settings.HF_TOKEN).to(self.device)
-            self.tokenizer = AutoTokenizer.from_pretrained(settings.MODEL_ID, use_auth_token=settings.HF_TOKEN)
+            # 1. OPTIMIZATION: Try loading from local files first
+            # This ensures we don't ping Hugging Face if we have the model "on device"
+            try:
+                logger.info("Attempting to load model from local cache...")
+                self.model = ParlerTTSForConditionalGeneration.from_pretrained(
+                    settings.MODEL_ID, 
+                    local_files_only=True
+                ).to(self.device)
+                
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    settings.MODEL_ID, 
+                    local_files_only=True
+                )
+                
+                # Load description tokenizer from the internal config path
+                self.description_tokenizer = AutoTokenizer.from_pretrained(
+                    self.model.config.text_encoder._name_or_path, 
+                    local_files_only=True
+                )
+                logger.info("Model loaded successfully from local cache.")
+
+            except Exception as e:
+                logger.info(f"Local load failed ({str(e)}). Downloading from Hugging Face Hub... (One-time process)")
+                
+                # 2. Fallback: Download from Hub (cache it for next time)
+                self.model = ParlerTTSForConditionalGeneration.from_pretrained(
+                    settings.MODEL_ID, 
+                    use_auth_token=settings.HF_TOKEN
+                ).to(self.device)
+                
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    settings.MODEL_ID, 
+                    use_auth_token=settings.HF_TOKEN
+                )
+                
+                self.description_tokenizer = AutoTokenizer.from_pretrained(
+                    self.model.config.text_encoder._name_or_path, 
+                    use_auth_token=settings.HF_TOKEN
+                )
+                logger.info(log_msg.TTS_MODEL_LOAD_SUCCESS)
+
+            self.model.eval()
             
-            # As per user snippet, getting tokenizer for description from model config
-            self.description_tokenizer = AutoTokenizer.from_pretrained(self.model.config.text_encoder._name_or_path, use_auth_token=settings.HF_TOKEN)
-            
-            self.model.eval() # Set to eval mode as per snippet
-            
-            logger.info(log_msg.TTS_MODEL_LOAD_SUCCESS)
         except Exception as e:
             logger.error(log_msg.TTS_MODEL_LOAD_FAIL.format(str(e)))
+            # If loading fails, ensure we reset to None so we can retry later if needed
+            self.model = None
             raise e
 
-    def generate_audio(self, text: str) -> io.BytesIO:
+    def generate_audio(self, text: str, description: str) -> io.BytesIO:
         """
-        Generates audio for the given text using the hardcoded description from settings.
-        
-        Args:
-            text (str): The input text to synthesize.
-            
-        Returns:
-            io.BytesIO: A buffer containing the generated WAV audio.
-            
-        Raises:
-            ValueError: If text is empty.
-            Exception: If generation fails.
+        Generates audio for the given text using the provided description.
+        Automatically loads the model if it's the first request (Lazy Loading).
         """
+        # Ensure model is loaded (Lazy check)
+        if self.model is None:
+            self._load_model()
+            
         logger.info(log_msg.TTS_PROCESSING_START.format(text[:50]))
         
         if not text:
@@ -57,8 +97,6 @@ class TTSService:
              raise ValueError("Text cannot be empty")
 
         try:
-            description = settings.DESCRIPTION
-            
             # Tokenize description
             description_inputs = self.description_tokenizer(
                 description, 

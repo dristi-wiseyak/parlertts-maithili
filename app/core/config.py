@@ -3,11 +3,10 @@ import torch
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Wise TTS API"
+    PROJECT_NAME: str = "Wise multilingual TTS"
     VERSION: str = "1.0.0"
     MODEL_ID: str = "ai4bharat/indic-parler-tts"
     DEVICE: str = "cuda:0" if torch.cuda.is_available() else "cpu"
-    DESCRIPTION: str = "A Maithili female speaker speaks Maithili delivers a slightly expressive speech with a fast speed and pitch."
     HF_TOKEN: str | None = None  
     HF_HOME: str | None = None
 
