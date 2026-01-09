@@ -1,0 +1,14 @@
+
+version: '3.8'
+
+services:
+  maithili-tts:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ~/.cache/huggingface:/tmp/huggingface # Mount local cache to avoid redownloading models
+    environment:
+      - CUDA_VISIBLE_DEVICES=-1 # Default to CPU, change if GPU available
+    restart: unless-stopped

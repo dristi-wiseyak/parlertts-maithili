@@ -1,0 +1,10 @@
+
+fastapi
+uvicorn
+pydantic-settings
+torch
+transformers
+scipy
+soundfile
+git+https://github.com/huggingface/parler-tts.git
+python-multipart
