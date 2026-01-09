@@ -1,4 +1,3 @@
-
 # Log Messages
 SERVER_STARTUP = "Server starting up..."
 SERVER_SHUTDOWN = "Server shutting down..."
